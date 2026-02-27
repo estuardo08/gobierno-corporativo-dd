@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Gobierno Corporativo — Drag & Drop</title>
+<style>
+  :root {
+    --bg:#f5f6f8; --card:#fff; --line:#d7dbe2; --text:#1f2328; --muted:#6b7280;
+    --shadow: 0 6px 18px rgba(15,23,42,.08);
+    --radius:16px;
+  }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text);}
+  header { padding:18px 22px; background:#ffffff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10;}
+  header h1 { margin:0; font-size:18px;}
+  header p { margin:6px 0 0; color:var(--muted); font-size:13px; }
+  .wrap { display:grid; grid-template-columns: 1.2fr .8fr; gap:16px; padding:16px; max-width:1400px; margin:0 auto;}
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;}
+  .panel .hd { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; gap:10px; align-items:center; justify-content:space-between;}
+  .panel .hd strong { font-size:14px; }
+  .panel .bd { padding:12px; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; }
+  button { border:1px solid var(--line); background:#fff; padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:600; font-size:12px; }
+  button:hover { background:#fafafa; }
+  .score { font-size:12px; color:var(--muted); }
+  /* Concepts */
+  .concepts { display:grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap:12px; }
+  .concept { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
+  .concept .top { display:flex; gap:10px; align-items:center; padding:10px; border-bottom:1px dashed var(--line); background:#fbfbfc;}
+  .concept img { width:110px; height:110px; border-radius:14px; border:1px solid var(--line); object-fit:cover; }
+  .concept .name { font-weight:800; font-size:13px; line-height:1.2; }
+  .dropzone { min-height:160px; padding:10px; display:flex; flex-wrap:wrap; gap:10px; align-content:flex-start; }
+  .dropzone.is-over { outline:3px solid rgba(59,130,246,.35); outline-offset:-3px; background:rgba(59,130,246,.04);}
+  /* Description cards */
+  .bank { display:grid; grid-template-columns: 1fr; gap:10px; max-height: calc(100vh - 210px); overflow:auto; padding-right:4px; }
+  .desc { border:1px solid var(--line); border-radius:14px; background:#fff; box-shadow: 0 2px 10px rgba(15,23,42,.06); overflow:hidden; cursor:grab; }
+  .desc:active { cursor:grabbing; }
+  .desc img { width:100%; height:auto; display:block; }
+  .tag { padding:8px 10px; font-size:12px; color:var(--muted); display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--line);}
+  .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted);}
+  .ok { border-color: rgba(16,185,129,.55)!important; }
+  .bad { border-color: rgba(239,68,68,.55)!important; }
+  .footerNote { padding:10px 16px 18px; max-width:1400px; margin:0 auto; color:var(--muted); font-size:12px; }
+  @media (max-width: 980px) {
+    .wrap { grid-template-columns: 1fr; }
+    .concepts { grid-template-columns: 1fr; }
+    .bank { max-height: 520px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Actividad — Gobierno corporativo (arrastrar y soltar)</h1>
+  <p>Arrastra cada <b>DESCRIPCIÓN</b> hacia el <b>CONCEPTO</b> que corresponda. Hay descripciones correctas e incorrectas (a propósito).</p>
+</header>
+
+<div class="wrap">
+  <section class="panel" id="leftPanel">
+    <div class="hd">
+      <strong>Conceptos (zonas de destino)</strong>
+      <div class="btns">
+        <button id="btnReset" type="button">Reiniciar</button>
+        <button id="btnCheck" type="button">Calificar</button>
+        <button id="btnAnswers" type="button">Mostrar respuestas</button>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="score" id="scoreLine">Coloca las tarjetas y luego presiona <b>Calificar</b>.</div>
+      <div class="concepts" id="conceptGrid"></div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="hd">
+      <strong>Banco de descripciones (arrastrables)</strong>
+      <span class="score" id="bankCount"></span>
+    </div>
+    <div class="bd">
+      <div class="bank" id="bank"></div>
+    </div>
+  </aside>
+</div>
+
+<div class="footerNote">
+  Sugerencia para foro: trabajen en parejas, comparen criterios y comenten qué conceptos se confunden más y por qué.
+</div>
+
+<script>
+const DATA = {"concepts": [{"index": 0, "name": "Transparencia", "img": "assets/01_concepto_01.jpg"}, {"index": 1, "name": "Rendición de cuentas (Accountability)", "img": "assets/01_concepto_02.jpg"}, {"index": 2, "name": "Equidad / Trato justo", "img": "assets/01_concepto_03.jpg"}, {"index": 3, "name": "Responsabilidad corporativa", "img": "assets/01_concepto_04.jpg"}, {"index": 4, "name": "Sostenibilidad (ESG)", "img": "assets/01_concepto_05.jpg"}, {"index": 5, "name": "Consejo de administración (Board)", "img": "assets/01_concepto_06.jpg"}, {"index": 6, "name": "Independencia del consejo", "img": "assets/01_concepto_07.jpg"}, {"index": 7, "name": "Gestión de riesgos", "img": "assets/01_concepto_08.jpg"}, {"index": 8, "name": "Control interno", "img": "assets/01_concepto_09.jpg"}, {"index": 9, "name": "Cumplimiento (Compliance)", "img": "assets/01_concepto_10.jpg"}, {"index": 10, "name": "Ética e integridad", "img": "assets/01_concepto_11.jpg"}, {"index": 11, "name": "Conflictos de interés", "img": "assets/01_concepto_12.jpg"}], "descriptions": [{"id": "d001", "img": "assets/02_descripcion_001.jpg", "conceptIndex": 7}, {"id": "d002", "img": "assets/02_descripcion_002.jpg", "conceptIndex": 4}, {"id": "d003", "img": "assets/02_descripcion_003.jpg", "conceptIndex": 10}, {"id": "d004", "img": "assets/02_descripcion_004.jpg", "conceptIndex": 2}, {"id": "d005", "img": "assets/02_descripcion_005.jpg", "conceptIndex": 3}, {"id": "d006", "img": "assets/02_descripcion_006.jpg", "conceptIndex": 4}, {"id": "d007", "img": "assets/02_descripcion_007.jpg", "conceptIndex": 11}, {"id": "d008", "img": "assets/02_descripcion_008.jpg", "conceptIndex": 11}, {"id": "d009", "img": "assets/02_descripcion_009.jpg", "conceptIndex": 6}, {"id": "d010", "img": "assets/02_descripcion_010.jpg", "conceptIndex": 3}, {"id": "d011", "img": "assets/02_descripcion_011.jpg", "conceptIndex": 1}, {"id": "d012", "img": "assets/02_descripcion_012.jpg", "conceptIndex": 7}, {"id": "d013", "img": "assets/02_descripcion_013.jpg", "conceptIndex": 6}, {"id": "d014", "img": "assets/02_descripcion_014.jpg", "conceptIndex": 9}, {"id": "d015", "img": "assets/02_descripcion_015.jpg", "conceptIndex": 6}, {"id": "d016", "img": "assets/02_descripcion_016.jpg", "conceptIndex": 9}, {"id": "d017", "img": "assets/02_descripcion_017.jpg", "conceptIndex": 0}, {"id": "d018", "img": "assets/02_descripcion_018.jpg", "conceptIndex": 4}, {"id": "d019", "img": "assets/02_descripcion_019.jpg", "conceptIndex": 10}, {"id": "d020", "img": "assets/02_descripcion_020.jpg", "conceptIndex": 0}, {"id": "d021", "img": "assets/02_descripcion_021.jpg", "conceptIndex": 5}, {"id": "d022", "img": "assets/02_descripcion_022.jpg", "conceptIndex": 2}, {"id": "d023", "img": "assets/02_descripcion_023.jpg", "conceptIndex": 11}, {"id": "d024", "img": "assets/02_descripcion_024.jpg", "conceptIndex": 4}, {"id": "d025", "img": "assets/02_descripcion_025.jpg", "conceptIndex": 8}, {"id": "d026", "img": "assets/02_descripcion_026.jpg", "conceptIndex": 4}, {"id": "d027", "img": "assets/02_descripcion_027.jpg", "conceptIndex": 0}, {"id": "d028", "img": "assets/02_descripcion_028.jpg", "conceptIndex": 8}, {"id": "d029", "img": "assets/02_descripcion_029.jpg", "conceptIndex": 5}, {"id": "d030", "img": "assets/02_descripcion_030.jpg", "conceptIndex": 10}, {"id": "d031", "img": "assets/02_descripcion_031.jpg", "conceptIndex": 3}, {"id": "d032", "img": "assets/02_descripcion_032.jpg", "conceptIndex": 5}, {"id": "d033", "img": "assets/02_descripcion_033.jpg", "conceptIndex": 7}, {"id": "d034", "img": "assets/02_descripcion_034.jpg", "conceptIndex": 5}, {"id": "d035", "img": "assets/02_descripcion_035.jpg", "conceptIndex": 9}, {"id": "d036", "img": "assets/02_descripcion_036.jpg", "conceptIndex": 2}, {"id": "d037", "img": "assets/02_descripcion_037.jpg", "conceptIndex": 7}, {"id": "d038", "img": "assets/02_descripcion_038.jpg", "conceptIndex": 8}, {"id": "d039", "img": "assets/02_descripcion_039.jpg", "conceptIndex": 6}, {"id": "d040", "img": "assets/02_descripcion_040.jpg", "conceptIndex": 10}, {"id": "d041", "img": "assets/02_descripcion_041.jpg", "conceptIndex": 2}, {"id": "d042", "img": "assets/02_descripcion_042.jpg", "conceptIndex": 9}, {"id": "d043", "img": "assets/02_descripcion_043.jpg", "conceptIndex": 11}, {"id": "d044", "img": "assets/02_descripcion_044.jpg", "conceptIndex": 0}, {"id": "d045", "img": "assets/02_descripcion_045.jpg", "conceptIndex": 5}, {"id": "d046", "img": "assets/02_descripcion_046.jpg", "conceptIndex": 7}, {"id": "d047", "img": "assets/02_descripcion_047.jpg", "conceptIndex": 1}, {"id": "d048", "img": "assets/02_descripcion_048.jpg", "conceptIndex": 6}, {"id": "d049", "img": "assets/02_descripcion_049.jpg", "conceptIndex": 10}, {"id": "d050", "img": "assets/02_descripcion_050.jpg", "conceptIndex": 8}, {"id": "d051", "img": "assets/02_descripcion_051.jpg", "conceptIndex": 1}, {"id": "d052", "img": "assets/02_descripcion_052.jpg", "conceptIndex": 11}, {"id": "d053", "img": "assets/02_descripcion_053.jpg", "conceptIndex": 1}, {"id": "d054", "img": "assets/02_descripcion_054.jpg", "conceptIndex": 2}, {"id": "d055", "img": "assets/02_descripcion_055.jpg", "conceptIndex": 3}, {"id": "d056", "img": "assets/02_descripcion_056.jpg", "conceptIndex": 3}, {"id": "d057", "img": "assets/02_descripcion_057.jpg", "conceptIndex": 9}, {"id": "d058", "img": "assets/02_descripcion_058.jpg", "conceptIndex": 0}, {"id": "d059", "img": "assets/02_descripcion_059.jpg", "conceptIndex": 1}, {"id": "d060", "img": "assets/02_descripcion_060.jpg", "conceptIndex": 8}]};
+
+const bank = document.getElementById('bank');
+const grid = document.getElementById('conceptGrid');
+const scoreLine = document.getElementById('scoreLine');
+const bankCount = document.getElementById('bankCount');
+
+function el(tag, attrs={}, children=[]) {
+  const n = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v;
+    else n.setAttribute(k, v);
+  }
+  for (const c of children) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  return n;
+}
+
+function renderConcepts() {
+  grid.innerHTML = '';
+  for (const c of DATA.concepts) {
+    const dz = el('div', { class:'dropzone', 'data-concept': String(c.index) });
+    dz.addEventListener('dragover', (e)=>{ e.preventDefault(); dz.classList.add('is-over'); });
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('is-over'));
+    dz.addEventListener('drop', (e)=>{
+      e.preventDefault(); dz.classList.remove('is-over');
+      const id = e.dataTransfer.getData('text/plain');
+      const card = document.getElementById(id);
+      if (card) dz.appendChild(card);
+      updateCounts();
+    });
+
+    const card = el('div', { class:'concept' }, [
+      el('div', { class:'top' }, [
+        el('img', { src: c.img, alt: c.name }),
+        el('div', {}, [
+          el('div', { class:'name' }, [c.name]),
+          el('div', { style:'color:var(--muted);font-size:12px;margin-top:4px;' }, ['Suelta aquí descripciones'])
+        ])
+      ]),
+      dz
+    ]);
+    grid.appendChild(card);
+  }
+}
+
+function renderDescriptions() {
+  bank.innerHTML = '';
+  for (const d of DATA.descriptions) {
+    const img = el('img', { src: d.img, alt: d.id });
+    const footer = el('div', { class:'tag' }, [
+      el('span', {}, ['Tarjeta ', d.id.replace('d','')]),
+      el('span', { class:'pill' }, ['Arrastra'])
+    ]);
+
+    const card = el('div', { class:'desc', id:d.id, draggable:'true', 'data-target': String(d.conceptIndex) }, [img, footer]);
+    card.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', d.id); });
+    bank.appendChild(card);
+  }
+  updateCounts();
+}
+
+function updateCounts() {
+  const total = DATA.descriptions.length;
+  const inBank = bank.querySelectorAll('.desc').length;
+  bankCount.textContent = `${inBank}/${total} en banco`;
+}
+
+function resetAll() {
+  for (const node of Array.from(document.querySelectorAll('.desc'))) {
+    node.classList.remove('ok','bad');
+    const pill = node.querySelector('.pill');
+    if (pill) pill.textContent = 'Arrastra';
+    bank.appendChild(node);
+  }
+  scoreLine.innerHTML = 'Coloca las tarjetas y luego presiona <b>Calificar</b>.';
+  updateCounts();
+  bank.scrollTop = 0;
+}
+
+function check() {
+  let placed = 0, correct = 0;
+  for (const node of Array.from(document.querySelectorAll('.desc'))) {
+    node.classList.remove('ok','bad');
+    const pill = node.querySelector('.pill');
+    if (pill) pill.textContent = 'Arrastra';
+  }
+  for (const card of Array.from(document.querySelectorAll('.desc'))) {
+    const parent = card.parentElement;
+    if (!parent || parent.id === 'bank' || !parent.classList.contains('dropzone')) continue;
+    placed++;
+    const target = card.getAttribute('data-target');
+    const concept = parent.getAttribute('data-concept');
+    const pill = card.querySelector('.pill');
+    if (target === concept) {
+      correct++;
+      card.classList.add('ok');
+      if (pill) pill.textContent = 'Correcto';
+    } else {
+      card.classList.add('bad');
+      if (pill) pill.textContent = 'Revisar';
+    }
+  }
+  scoreLine.innerHTML = `<b>Resultado:</b> ${correct}/${placed} correctas (de ${placed} colocadas).` +
+    (placed < DATA.descriptions.length ? ` Te faltan ${DATA.descriptions.length - placed} por colocar.` : '');
+}
+
+function showAnswers() {
+  for (const card of Array.from(document.querySelectorAll('.desc'))) {
+    const target = card.getAttribute('data-target');
+    const zone = document.querySelector(`.dropzone[data-concept="${target}"]`);
+    if (zone) zone.appendChild(card);
+  }
+  updateCounts();
+  check();
+}
+
+document.getElementById('btnReset').addEventListener('click', resetAll);
+document.getElementById('btnCheck').addEventListener('click', check);
+document.getElementById('btnAnswers').addEventListener('click', showAnswers);
+
+renderConcepts();
+renderDescriptions();
+</script>
+</body>
+</html>
